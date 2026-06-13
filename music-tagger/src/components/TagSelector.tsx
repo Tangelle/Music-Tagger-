@@ -46,8 +46,11 @@ export default function TagSelector({ selectedTagIds, onAddTag, onRemoveTag }: T
         closeDropdown();
       }
     };
-    // Close on scroll (the underlying table may scroll)
-    const handleScroll = () => closeDropdown();
+    // 关闭由外部滚动引起，但忽略下拉面板自身内部的滚动
+    const handleScroll = (e: Event) => {
+      if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) return;
+      closeDropdown();
+    };
     document.addEventListener('mousedown', handleClick);
     window.addEventListener('scroll', handleScroll, true);
     return () => {
