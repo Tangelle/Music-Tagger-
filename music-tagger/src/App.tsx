@@ -18,6 +18,9 @@ function App() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [importFeedback, setImportFeedback] = useState<{ text: string; ok: boolean } | null>(null);
   const dragCounterRef = useRef(0);
+  const playlistRef = useRef<{ tracks: Track[]; index: number }>({ tracks: [], index: -1 });
+  const [shuffleMode, setShuffleMode] = useState<boolean>(false);
+  const shuffleHistoryRef = useRef<number[]>([]);
 
   const refreshData = useCallback(() => {
     setRefreshKey(k => k + 1);
@@ -27,11 +30,72 @@ function App() {
     window.api.stats.get().then(setStats).catch(console.error);
   }, [refreshKey]);
 
-  const playTrack = useCallback(async (track: Track) => {
+  const playTrack = useCallback(async (track: Track, playlist?: Track[], index?: number) => {
     const exists = await window.api.file.exists(track.file_path);
     if (exists) {
       setCurrentTrack(track);
+      if (playlist && index !== undefined) {
+        playlistRef.current = { tracks: playlist, index };
+        if (shuffleMode) {
+          shuffleHistoryRef.current = [index];
+        }
+      } else {
+        playlistRef.current = { tracks: [], index: -1 };
+        shuffleHistoryRef.current = [];
+      }
     }
+  }, [shuffleMode]);
+
+  const playPrev = useCallback(() => {
+    if (shuffleMode) {
+      const history = shuffleHistoryRef.current;
+      if (history.length <= 1) return;
+      history.pop();
+      const prevIndex = history[history.length - 1];
+      const { tracks } = playlistRef.current;
+      if (prevIndex >= 0 && prevIndex < tracks.length) {
+        setCurrentTrack(tracks[prevIndex]);
+        playlistRef.current = { tracks, index: prevIndex };
+      }
+      return;
+    }
+    const { tracks, index } = playlistRef.current;
+    if (tracks.length === 0 || index <= 0) return;
+    playTrack(tracks[index - 1], tracks, index - 1);
+  }, [playTrack, shuffleMode]);
+
+  const playNext = useCallback(() => {
+    if (shuffleMode) {
+      const { tracks } = playlistRef.current;
+      if (tracks.length === 0) return;
+      const playedSet = new Set(shuffleHistoryRef.current);
+      const remaining = tracks
+        .map((_, i) => i)
+        .filter(i => !playedSet.has(i));
+      if (remaining.length === 0) return;
+      const randomIndex = remaining[Math.floor(Math.random() * remaining.length)];
+      shuffleHistoryRef.current.push(randomIndex);
+      setCurrentTrack(tracks[randomIndex]);
+      playlistRef.current = { tracks, index: randomIndex };
+      return;
+    }
+    const { tracks, index } = playlistRef.current;
+    if (tracks.length === 0 || index >= tracks.length - 1 || index < 0) return;
+    playTrack(tracks[index + 1], tracks, index + 1);
+  }, [playTrack, shuffleMode]);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffleMode(prev => {
+      const next = !prev;
+      if (next) {
+        if (playlistRef.current.index >= 0) {
+          shuffleHistoryRef.current = [playlistRef.current.index];
+        }
+      } else {
+        shuffleHistoryRef.current = [];
+      }
+      return next;
+    });
   }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -201,7 +265,23 @@ function App() {
       {currentTrack && (
         <AudioPlayer
           track={currentTrack}
-          onClose={() => setCurrentTrack(null)}
+          onClose={() => {
+            setCurrentTrack(null);
+            playlistRef.current = { tracks: [], index: -1 };
+            shuffleHistoryRef.current = [];
+          }}
+          onPrev={
+            playlistRef.current.tracks.length > 0 &&
+            (shuffleMode || playlistRef.current.index > 0)
+              ? playPrev : null
+          }
+          onNext={
+            playlistRef.current.tracks.length > 0 &&
+            (shuffleMode || (playlistRef.current.index < playlistRef.current.tracks.length - 1 && playlistRef.current.index >= 0))
+              ? playNext : null
+          }
+          shuffleMode={shuffleMode}
+          onToggleShuffle={toggleShuffle}
         />
       )}
 

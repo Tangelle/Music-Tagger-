@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward, FolderOpen } from 'lucide-react';
+import { Play, Pause, X, Volume2, VolumeX, SkipBack, SkipForward, FolderOpen, Shuffle, Repeat } from 'lucide-react';
 import type { Track } from '../types';
 
 interface AudioPlayerProps {
   track: Track;
   onClose: () => void;
+  onPrev: (() => void) | null;
+  onNext: (() => void) | null;
+  shuffleMode: boolean;
+  onToggleShuffle: () => void;
 }
 
-export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
+export default function AudioPlayer({ track, onClose, onPrev, onNext, shuffleMode, onToggleShuffle }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -70,7 +74,6 @@ export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
     }
   }, []);
 
-  // 进度条：通过 clientX 计算位置，支持 click 和 drag
   const calcSeek = useCallback((clientX: number) => {
     const bar = document.getElementById('progress-bar');
     if (!bar || !duration) return undefined;
@@ -109,7 +112,6 @@ export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
     setIsMuted(audio.muted);
   }, []);
 
-  // 音量：通过 clientX 计算比例，支持 click 和 drag
   const calcVolume = useCallback((clientX: number) => {
     const bar = document.getElementById('volume-bar');
     if (!bar) return undefined;
@@ -184,7 +186,7 @@ export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
             </span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{track.title}</p>
+            <p className="text-sm font-medium text-txt-heading truncate">{track.title}</p>
             <p className="text-xs text-txt-muted truncate">
               {track.artist || '未知艺术家'}
               {track.album && ` · ${track.album}`}
@@ -199,7 +201,29 @@ export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
           </span>
 
           <div className="flex items-center gap-1">
-            <button className="btn-ghost btn-xs" title="上一首">
+            {shuffleMode ? (
+              <button
+                className="btn-ghost btn-xs text-indigo-400"
+                title="乱序播放中 — 点击切换为顺序播放"
+                onClick={onToggleShuffle}
+              >
+                <Shuffle className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                className="btn-ghost btn-xs"
+                title="顺序播放中 — 点击切换为乱序播放"
+                onClick={onToggleShuffle}
+              >
+                <Repeat className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              className="btn-ghost btn-xs"
+              title="上一首"
+              onClick={onPrev || undefined}
+              disabled={!onPrev}
+            >
               <SkipBack className="w-4 h-4" />
             </button>
             <button
@@ -209,7 +233,12 @@ export default function AudioPlayer({ track, onClose }: AudioPlayerProps) {
             >
               {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
             </button>
-            <button className="btn-ghost btn-xs" title="下一首">
+            <button
+              className="btn-ghost btn-xs"
+              title="下一首"
+              onClick={onNext || undefined}
+              disabled={!onNext}
+            >
               <SkipForward className="w-4 h-4" />
             </button>
           </div>

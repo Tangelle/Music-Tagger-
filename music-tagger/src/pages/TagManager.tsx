@@ -12,7 +12,7 @@ const TAG_COLORS = [
 ];
 
 interface TagManagerProps {
-  onPlayTrack: (track: Track) => void;
+  onPlayTrack: (track: Track, playlist?: Track[], index?: number) => void;
   onDataChange: () => void;
 }
 
@@ -248,7 +248,7 @@ export default function TagManager({ onPlayTrack, onDataChange }: TagManagerProp
                     </tr>
                   </thead>
                   <tbody>
-                    {tagTracks.map(track => (
+                    {tagTracks.map((track, index) => (
                       <tr
                         key={track.id}
                         draggable
@@ -258,7 +258,7 @@ export default function TagManager({ onPlayTrack, onDataChange }: TagManagerProp
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => onPlayTrack(track)}
+                              onClick={() => onPlayTrack(track, tagTracks, index)}
                               className="p-1 rounded text-slate-500 dark:text-slate-600 hover:text-slate-400 dark:text-slate-700 dark:text-slate-300 hover:bg-surface-700"
                             >
                               <Play className="w-3 h-3 fill-current" />

@@ -5,7 +5,7 @@ import { useDragOutTrack } from '../hooks/useDragDrop';
 import type { Track, Tag } from '../types';
 
 interface SearchPageProps {
-  onPlayTrack: (track: Track) => void;
+  onPlayTrack: (track: Track, playlist?: Track[], index?: number) => void;
   currentTrack: Track | null;
 }
 
@@ -196,7 +196,7 @@ export default function SearchPage({ onPlayTrack, currentTrack }: SearchPageProp
                     </tr>
                   </thead>
                   <tbody>
-                    {displayTracks.map(track => (
+                    {displayTracks.map((track, index) => (
                       <tr
                         key={track.id}
                         draggable
@@ -210,7 +210,7 @@ export default function SearchPage({ onPlayTrack, currentTrack }: SearchPageProp
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => onPlayTrack(track)}
+                              onClick={() => onPlayTrack(track, displayTracks, index)}
                               className={`p-1 rounded ${
                                 currentTrack?.id === track.id
                                   ? 'text-indigo-400 bg-indigo-600/20'

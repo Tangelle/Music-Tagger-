@@ -6,7 +6,7 @@ import { useDragOutTrack } from '../hooks/useDragDrop';
 import type { Track, Tag } from '../types';
 
 interface MusicLibraryProps {
-  onPlayTrack: (track: Track) => void;
+  onPlayTrack: (track: Track, playlist?: Track[], index?: number) => void;
   currentTrack: Track | null;
   onDataChange: () => void;
 }
@@ -249,7 +249,7 @@ export default function MusicLibrary({ onPlayTrack, currentTrack, onDataChange }
                   </td>
                 </tr>
               )}
-              {tracks.map((track) => (
+              {tracks.map((track, index) => (
                 <tr
                   key={track.id}
                   draggable
@@ -271,7 +271,7 @@ export default function MusicLibrary({ onPlayTrack, currentTrack, onDataChange }
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onPlayTrack(track)}
+                        onClick={() => onPlayTrack(track, tracks, index)}
                         className={`p-1.5 rounded-md transition-colors ${
                           currentTrack?.id === track.id
                             ? 'text-indigo-400 bg-indigo-600/20'
