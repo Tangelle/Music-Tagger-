@@ -1,0 +1,58 @@
+{
+  "name": "music-tagger",
+  "version": "1.0.0",
+  "description": "本地音乐标签管理器 - 给本地音乐打标签，按标签搜索音乐",
+  "main": "main-process/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development node scripts/start-electron.js\"",
+    "build": "vite build && electron-builder",
+    "vite:dev": "vite",
+    "vite:build": "vite build",
+    "electron:dev": "cross-env NODE_ENV=development node scripts/start-electron.js",
+    "electron:build": "electron-builder",
+    "electron": "cross-env NODE_ENV=development node scripts/start-electron.js"
+  },
+  "build": {
+    "appId": "com.musictagger.app",
+    "productName": "Music Tagger",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main-process/**/*",
+      "package.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": "nsis",
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.2.2",
+    "electron-builder": "^24.9.1",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.312.0",
+    "music-metadata": "^10.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sql.js": "^1.10.3"
+  }
+}

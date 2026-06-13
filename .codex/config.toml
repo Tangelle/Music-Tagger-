@@ -1,0 +1,9 @@
+sandbox_mode = "workspace-write"
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+CLAUDE_CODE_DISABLE_AUTO_MEMORY = "0"
+
+[sandbox_workspace_write]
+network_access = true

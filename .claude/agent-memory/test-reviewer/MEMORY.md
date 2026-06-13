@@ -1,0 +1,11 @@
+- [Theme Architecture](theme-architecture.md) — How theme toggling works: CSS vars, dark class, localStorage, useTheme hook
+- [Drag-Out Mechanism v2](drag-out-mechanism-v2.md) — Proper dragstart event + sync IPC (ipcMain.on/send) for OS-level drag-out, replaces old mousedown+mousemove workaround
+- [Audit: Drag-Drop Fix Review 2026-06-13 (SUPERSEDED)](audit-drag-drop-fix-review-20260613.md) — Re-review results for old mousedown+mousemove approach, now superseded by v2 dragstart approach
+- [Drag-Out Fix v3 Review](drag-out-fix-v3-review.md) — 3rd review: all 3 bugs fixed, conditional pass, 1 minor async issue
+- [Drag-Out Fix v4 Review](drag-out-fix-v4-review.md) — 4th review: async IIFE refactor, zero findings, pass
+- [Drag-Out Fix v6 Review](drag-out-fix-v6-review.md) — 6th review: sendSync root cause fix, zero findings, pass, 1 minor suggestion
+- [Drag-Out Mechanism v7](drag-out-mechanism-v7.md) — Definitive fix: sendSync blocks renderer so startDrag runs in dragstart event context
+- [Drag-Out Fix v7 Review](drag-out-fix-v7-review.md) — 7th review: sendSync confirmed correct, zero findings, pass, 1 minor suggestion
+- [Drag-Out Fix v8 Review](drag-out-fix-v8-review.md) — 8th review: send + preventDefault reverted from sendSync, 3 critical bugs, fail
+- [Drag-In Fix v3 Review](drag-in-fix-v3-review.md) — 3rd review: useState→useRef dragCounter fix, zero findings, pass
+- [AudioPlayer Drag Fix Review](audioplayer-drag-fix-review.md) — mousedown-drag fix for seek bar and volume bar, zero bugs, pass
