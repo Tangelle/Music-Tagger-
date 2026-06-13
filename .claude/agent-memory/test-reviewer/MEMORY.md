@@ -9,3 +9,4 @@
 - [Drag-Out Fix v8 Review](drag-out-fix-v8-review.md) — 8th review: send + preventDefault reverted from sendSync, 3 critical bugs, fail
 - [Drag-In Fix v3 Review](drag-in-fix-v3-review.md) — 3rd review: useState→useRef dragCounter fix, zero findings, pass
 - [AudioPlayer Drag Fix Review](audioplayer-drag-fix-review.md) — mousedown-drag fix for seek bar and volume bar, zero bugs, pass
+- [Shuffle History Push vs Reset](shuffle-history-push-vs-reset.md) — Bug pattern: ref history arrays must reset on manual user action, not push/append
