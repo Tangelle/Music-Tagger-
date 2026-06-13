@@ -14,16 +14,21 @@ export default function TagSelector({ selectedTagIds, onAddTag, onRemoveTag }: T
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [search, setSearch] = useState('');
   const [newTagName, setNewTagName] = useState('');
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, openUpward: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const openDropdown = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 320; // max-h-48 (192px) + header/footer ~128px 估算
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // 如果下方空间不足且上方空间更大，则向上弹出
+      const openUpward = spaceBelow < dropdownHeight && rect.top > spaceBelow;
       setPosition({
-        top: rect.bottom + 6,
+        top: openUpward ? rect.top - 6 : rect.bottom + 6,
         left: Math.min(rect.left, window.innerWidth - 280),
+        openUpward,
       });
     }
     window.api.tags.getAll().then(setAllTags);
@@ -87,7 +92,9 @@ export default function TagSelector({ selectedTagIds, onAddTag, onRemoveTag }: T
   const dropdown = isOpen && (
     <div
       ref={dropdownRef}
-      className="fixed z-[9999] w-64 card shadow-2xl shadow-black/50 border-surface-600 animate-fade-in"
+      className={`fixed z-[9999] w-64 card shadow-2xl shadow-black/50 border-surface-600 animate-fade-in ${
+        position.openUpward ? 'translate-y-[-100%]' : ''
+      }`}
       style={{ top: position.top, left: position.left }}
     >
       <div className="p-2 border-b border-surface-700/50">
