@@ -18,7 +18,7 @@
 
 ---
 
-## 📸 界面预览
+## ✨ 功能特性
 
 <div align="center">
 
@@ -27,10 +27,6 @@
 | ![音乐库](./screenshots/music-library.png) | ![标签管理](./screenshots/tag-manager.png) | ![搜索](./screenshots/search-page.png) |
 
 </div>
-
----
-
-## ✨ 功能特性
 
 | 分类 | 说明 |
 |------|------|
