@@ -18,6 +18,19 @@ A sleek **Windows desktop app** for tagging and organizing your local music coll
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+
+| Music Library | Tag Manager | Search |
+|:---:|:---:|:---:|
+| ![Music Library](./screenshots/music-library.png) | ![Tag Manager](./screenshots/tag-manager.png) | ![Search](./screenshots/search-page.png) |
+
+</div>
+
+---
+---
+
 ## ✨ Features
 
 | Category | Details |
