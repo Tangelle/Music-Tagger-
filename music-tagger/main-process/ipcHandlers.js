@@ -5,25 +5,34 @@ const trackService = require('./trackService');
 const tagService = require('./tagService');
 const searchService = require('./searchService');
 const scanner = require('./scanner');
-const { saveNow } = require('./database');
+const { saveNow, isDbReady } = require('./database');
+
+// Graceful fallback: if DB isn't loaded yet, return empty/default results.
+// The renderer will re-fetch once it receives the 'db:ready' event.
+function guard(fn, fallback) {
+  return (...args) => {
+    if (!isDbReady()) return fallback;
+    return fn(...args);
+  };
+}
 
 function registerIpcHandlers(mainWindow) {
   // ── Track APIs ──
-  ipcMain.handle('tracks:getAll', (_event, opts) => {
+  ipcMain.handle('tracks:getAll', guard((_event, opts) => {
     return trackService.getAllTracks(opts);
-  });
+  }, { tracks: [], total: 0, limit: 500, offset: 0 }));
 
-  ipcMain.handle('tracks:getById', (_event, id) => {
+  ipcMain.handle('tracks:getById', guard((_event, id) => {
     return trackService.getTrackById(id);
-  });
+  }, null));
 
-  ipcMain.handle('tracks:getByTag', (_event, tagId, opts) => {
+  ipcMain.handle('tracks:getByTag', guard((_event, tagId, opts) => {
     return trackService.getTracksByTag(tagId, opts);
-  });
+  }, []));
 
-  ipcMain.handle('tracks:getByTags', (_event, tagIds, opts) => {
+  ipcMain.handle('tracks:getByTags', guard((_event, tagIds, opts) => {
     return trackService.getTracksByTags(tagIds, opts);
-  });
+  }, []));
 
   ipcMain.handle('tracks:recordPlay', (_event, trackId) => {
     trackService.recordPlay(trackId);
@@ -140,13 +149,13 @@ function registerIpcHandlers(mainWindow) {
   });
 
   // ── Tag APIs ──
-  ipcMain.handle('tags:getAll', () => {
+  ipcMain.handle('tags:getAll', guard(() => {
     return tagService.getAllTags();
-  });
+  }, []));
 
-  ipcMain.handle('tags:getById', (_event, id) => {
+  ipcMain.handle('tags:getById', guard((_event, id) => {
     return tagService.getTagById(id);
-  });
+  }, null));
 
   ipcMain.handle('tags:create', (_event, name, color) => {
     const result = tagService.createTag(name, color);
@@ -207,9 +216,9 @@ function registerIpcHandlers(mainWindow) {
     };
   });
 
-  ipcMain.handle('tags:search', (_event, query) => {
+  ipcMain.handle('tags:search', guard((_event, query) => {
     return tagService.searchTags(query);
-  });
+  }, []));
 
   ipcMain.handle('tags:addToTrack', (_event, trackId, tagId) => {
     tagService.addTagToTrack(trackId, tagId);
@@ -223,9 +232,9 @@ function registerIpcHandlers(mainWindow) {
     return { success: true };
   });
 
-  ipcMain.handle('tags:getForTrack', (_event, trackId) => {
+  ipcMain.handle('tags:getForTrack', guard((_event, trackId) => {
     return tagService.getTagsForTrack(trackId);
-  });
+  }, []));
 
   ipcMain.handle('tags:setTrackTags', (_event, trackId, tagIds) => {
     tagService.setTrackTags(trackId, tagIds);
@@ -244,9 +253,9 @@ function registerIpcHandlers(mainWindow) {
     }
   });
 
-  ipcMain.handle('scan:getDirs', () => {
+  ipcMain.handle('scan:getDirs', guard(() => {
     return scanner.getScanDirs();
-  });
+  }, []));
 
   ipcMain.handle('scan:addDir', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -281,14 +290,14 @@ function registerIpcHandlers(mainWindow) {
   });
 
   // ── Search APIs ──
-  ipcMain.handle('search:all', (_event, query, opts) => {
+  ipcMain.handle('search:all', guard((_event, query, opts) => {
     return searchService.search(query, opts);
-  });
+  }, { tracks: [], tags: [] }));
 
   // ── Stats APIs ──
-  ipcMain.handle('stats:get', () => {
+  ipcMain.handle('stats:get', guard(() => {
     return searchService.getQuickStats();
-  });
+  }, { trackCount: 0, tagCount: 0, dirCount: 0 }));
 
   // ── File/System APIs ──
   ipcMain.handle('file:open', (_event, filePath) => {

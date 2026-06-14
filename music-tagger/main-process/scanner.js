@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { getDb } = require('./database');
+const { getDb, markDirty } = require('./database');
 const { insertTrack, removeTrackByPath, getTrackByPath } = require('./trackService');
 
 const SUPPORTED_FORMATS = new Set([
@@ -19,12 +19,14 @@ function getScanDirs() {
 function addScanDir(dirPath) {
   const db = getDb();
   db.prepare('INSERT OR IGNORE INTO scan_dirs (dir_path) VALUES (?)').run(dirPath);
+  markDirty();
   return getScanDirs();
 }
 
 function removeScanDir(dirPath) {
   const db = getDb();
   db.prepare('DELETE FROM scan_dirs WHERE dir_path = ?').run(dirPath);
+  markDirty();
   return getScanDirs();
 }
 
@@ -41,11 +43,14 @@ async function scanDirectories(onProgress) {
   // Clean up tracks whose files no longer exist
   const db = getDb();
   const existingTracks = db.prepare('SELECT id, file_path FROM tracks').all();
+  let cleanedCount = 0;
   for (const track of existingTracks) {
     if (!fs.existsSync(track.file_path)) {
       db.prepare('DELETE FROM tracks WHERE id = ?').run(track.id);
+      cleanedCount++;
     }
   }
+  if (cleanedCount > 0) markDirty();
 
   // Scan and add/update tracks
   let processed = 0;
@@ -67,10 +72,11 @@ async function scanDirectories(onProgress) {
 
   for (let i = 0; i < newTracks.length; i += SCAN_BATCH_SIZE) {
     const batch = newTracks.slice(i, i + SCAN_BATCH_SIZE);
+    let insertedInBatch = 0;
     for (const filePath of batch) {
       try {
         const metadata = await readMusicMetadata(filePath);
-        insertTrack({
+        const result = insertTrack({
           file_path: filePath,
           title: metadata.title || path.basename(filePath, path.extname(filePath)),
           artist: metadata.artist || null,
@@ -79,10 +85,12 @@ async function scanDirectories(onProgress) {
           format: path.extname(filePath).toLowerCase().replace('.', ''),
           file_size: metadata.fileSize || null,
         });
+        if (result.changes > 0) insertedInBatch++;
       } catch (err) {
         // Skip files that can't be read
       }
     }
+    if (insertedInBatch > 0) markDirty();
     processed += batch.length;
     if (onProgress) {
       onProgress({

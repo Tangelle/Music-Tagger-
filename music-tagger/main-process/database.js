@@ -6,6 +6,10 @@ const { app } = require('electron');
 let db = null;
 let dbPath = null;
 let configPath = null;
+let dbReady = false;
+let dbReadyCallbacks = [];
+let isDirty = false;
+let initPromise = null;
 
 // ── Statement wrapper that mimics better-sqlite3 API ──
 class Statement {
@@ -112,85 +116,120 @@ function writeConfig(config) {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }
 
+// ── DB ready tracking ──
+function isDbReady() { return dbReady; }
+
+function onDbReady(callback) {
+  if (dbReady) {
+    callback();
+  } else {
+    dbReadyCallbacks.push(callback);
+  }
+}
+
+function markDirty() { isDirty = true; }
+
 // ── Init ──
 async function initDb() {
-  const config = readConfig();
-  dbPath = config.dbPath || path.join(app.getPath('userData'), 'music-tagger.db');
-  const SQL = await initSqlJs();
+  if (initPromise) return initPromise;
 
-  let sqlDb;
-  if (fs.existsSync(dbPath)) {
-    const buffer = fs.readFileSync(dbPath);
-    sqlDb = new SQL.Database(buffer);
-  } else {
-    sqlDb = new SQL.Database();
-  }
+  initPromise = (async () => {
+    const config = readConfig();
+    dbPath = config.dbPath || path.join(app.getPath('userData'), 'music-tagger.db');
+    const SQL = await initSqlJs();
 
-  db = new Database(sqlDb, dbPath);
+    let sqlDb;
+    if (fs.existsSync(dbPath)) {
+      const buffer = fs.readFileSync(dbPath);
+      sqlDb = new SQL.Database(buffer);
+    } else {
+      sqlDb = new SQL.Database();
+    }
 
-  // PRAGMAs
-  db.db.run('PRAGMA foreign_keys = ON');
+    db = new Database(sqlDb, dbPath);
 
-  // Init tables
-  db.db.run(`
-    CREATE TABLE IF NOT EXISTS tracks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      file_path TEXT UNIQUE NOT NULL,
-      title TEXT,
-      artist TEXT,
-      album TEXT,
-      duration REAL,
-      format TEXT,
-      file_size INTEGER,
-      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_used_at DATETIME,
-      play_count INTEGER DEFAULT 0
-    )
-  `);
+    // PRAGMAs
+    db.db.run('PRAGMA foreign_keys = ON');
 
-  // 迁移：为旧数据库添加新列
-  const trackCols = db.prepare("PRAGMA table_info(tracks)").all().map(r => r.name);
-  if (!trackCols.includes('last_used_at')) {
-    db.exec('ALTER TABLE tracks ADD COLUMN last_used_at DATETIME');
-  }
-  if (!trackCols.includes('play_count')) {
-    db.exec('ALTER TABLE tracks ADD COLUMN play_count INTEGER DEFAULT 0');
-  }
+    // Init tables
+    db.db.run(`
+      CREATE TABLE IF NOT EXISTS tracks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_path TEXT UNIQUE NOT NULL,
+        title TEXT,
+        artist TEXT,
+        album TEXT,
+        duration REAL,
+        format TEXT,
+        file_size INTEGER,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_used_at DATETIME,
+        play_count INTEGER DEFAULT 0
+      )
+    `);
 
-  db.db.run(`
-    CREATE TABLE IF NOT EXISTS tags (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      color TEXT DEFAULT '#6366f1',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    // 迁移：为旧数据库添加新列
+    const trackCols = db.prepare("PRAGMA table_info(tracks)").all().map(r => r.name);
+    if (!trackCols.includes('last_used_at')) {
+      db.exec('ALTER TABLE tracks ADD COLUMN last_used_at DATETIME');
+    }
+    if (!trackCols.includes('play_count')) {
+      db.exec('ALTER TABLE tracks ADD COLUMN play_count INTEGER DEFAULT 0');
+    }
 
-  db.db.run(`
-    CREATE TABLE IF NOT EXISTS track_tags (
-      track_id INTEGER NOT NULL,
-      tag_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (track_id, tag_id),
-      FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
-      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-    )
-  `);
+    db.db.run(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        color TEXT DEFAULT '#6366f1',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  db.db.run(`
-    CREATE TABLE IF NOT EXISTS scan_dirs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dir_path TEXT UNIQUE NOT NULL,
-      added_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    db.db.run(`
+      CREATE TABLE IF NOT EXISTS track_tags (
+        track_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (track_id, tag_id),
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `);
 
-  // Save after init
-  db.save();
+    db.db.run(`
+      CREATE TABLE IF NOT EXISTS scan_dirs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dir_path TEXT UNIQUE NOT NULL,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Only save if this is a fresh DB (no existing file)
+    if (!fs.existsSync(dbPath)) {
+      db.save();
+    }
+
+    dbReady = true;
+    const cbs = dbReadyCallbacks;
+    dbReadyCallbacks = [];
+    for (const cb of cbs) {
+      try { cb(); } catch (e) { console.error('onDbReady callback error:', e); }
+    }
+  })();
+
+  return initPromise;
 }
 
 function getDb() {
-  if (!db) throw new Error('Database not initialized. Call initDb() first.');
+  if (!db) {
+    if (!dbReady) {
+      // DB not ready yet — this is expected during startup;
+      // IPC handlers that call getDb() should handle the null case gracefully.
+      return null;
+    }
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
   return db;
 }
 
@@ -211,12 +250,12 @@ let saveTimer = null;
 function autoSave(intervalMs = 30000) {
   if (saveTimer) clearInterval(saveTimer);
   saveTimer = setInterval(() => {
-    if (db) db.save();
+    if (db && isDirty) { db.save(); isDirty = false; }
   }, intervalMs);
 }
 
 function saveNow() {
-  if (db) db.save();
+  if (db && isDirty) { db.save(); isDirty = false; }
 }
 
 // ── Change database location ──
@@ -314,8 +353,9 @@ async function setDbPath(newPath, copyData) {
 
   db = new Database(sqlDb, newPath);
   dbPath = newPath;
+  isDirty = true;   // mark dirty so autoSave persists to the new location
 
   return dbPath;
 }
 
-module.exports = { initDb, getDb, closeDb, getDbPath, autoSave, saveNow, setDbPath };
+module.exports = { initDb, getDb, closeDb, getDbPath, autoSave, saveNow, setDbPath, isDbReady, onDbReady, markDirty };

@@ -127,6 +127,7 @@ declare global {
         selectDbPath: () => Promise<string | null>;
         setDbPath: (newDbPath: string, copyData: boolean) => Promise<{ success: boolean; dbPath: string }>;
       };
+      onDbReady: (callback: () => void) => () => void;
     };
   }
 }

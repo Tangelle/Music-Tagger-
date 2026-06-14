@@ -63,4 +63,11 @@ contextBridge.exposeInMainWorld('api', {
     selectDbPath: () => ipcRenderer.invoke('app:selectDbPath'),
     setDbPath: (newDbPath, copyData) => ipcRenderer.invoke('app:setDbPath', { newDbPath, copyData }),
   },
+
+  // Events — renderer subscribes to main-process events
+  onDbReady: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('db:ready', listener);
+    return () => ipcRenderer.removeListener('db:ready', listener);
+  },
 });

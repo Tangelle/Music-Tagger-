@@ -30,6 +30,14 @@ function App() {
     window.api.stats.get().then(setStats).catch(console.error);
   }, [refreshKey]);
 
+  // Listen for db:ready event — refresh data once DB is initialized
+  useEffect(() => {
+    const unsubscribe = window.api.onDbReady(() => {
+      refreshData();
+    });
+    return unsubscribe;
+  }, [refreshData]);
+
   const playTrack = useCallback(async (track: Track, playlist?: Track[], index?: number) => {
     const exists = await window.api.file.exists(track.file_path);
     if (exists) {

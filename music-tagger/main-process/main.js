@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { initDb, closeDb, autoSave, saveNow } = require('./database');
+const { initDb, closeDb, autoSave, saveNow, isDbReady, onDbReady } = require('./database');
 const { registerIpcHandlers } = require('./ipcHandlers');
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -33,6 +33,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  // Show window as soon as renderer is ready (HTML/CSS loaded, DB may still be loading)
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
@@ -43,13 +44,24 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(async () => {
-  // Initialize database (async for sql.js WASM loading)
-  await initDb();
-  autoSave(30000); // Auto-save every 30 seconds
+app.whenReady().then(() => {
+  // 1) Create window immediately — user sees the UI even while DB loads
+  createWindow();
 
-  createWindow();                     // 先创建窗口（mainWindow 赋值）
-  registerIpcHandlers(mainWindow);    // 再注册 IPC handlers（此时 mainWindow 不为 undefined）
+  // 2) Register IPC handlers (they handle DB-not-ready gracefully)
+  registerIpcHandlers(mainWindow);
+
+  // 3) Start DB init in background — don't block window display
+  initDb().then(() => {
+    autoSave(30000);
+
+    // Notify renderer that DB is ready so it can refresh data
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('db:ready');
+    }
+  }).catch(err => {
+    console.error('Database initialization failed:', err);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

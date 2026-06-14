@@ -1,4 +1,4 @@
-const { getDb } = require('./database');
+const { getDb, markDirty } = require('./database');
 
 function getAllTags() {
   const db = getDb();
@@ -30,6 +30,7 @@ function getTagByName(name) {
 function createTag(name, color = '#6366f1') {
   const db = getDb();
   const result = db.prepare('INSERT OR IGNORE INTO tags (name, color) VALUES (?, ?)').run(name, color);
+  markDirty();
   if (result.changes > 0) {
     return db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid);
   }
@@ -40,9 +41,11 @@ function updateTag(id, { name, color }) {
   const db = getDb();
   if (name !== undefined) {
     db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(name, id);
+    markDirty();
   }
   if (color !== undefined) {
     db.prepare('UPDATE tags SET color = ? WHERE id = ?').run(color, id);
+    markDirty();
   }
   return getTagById(id);
 }
@@ -50,6 +53,7 @@ function updateTag(id, { name, color }) {
 function deleteTag(id) {
   const db = getDb();
   db.prepare('DELETE FROM tags WHERE id = ?').run(id);
+  markDirty();
 }
 
 function deleteTags(ids) {
@@ -68,17 +72,20 @@ function deleteTags(ids) {
       results.push({ id, name: `ID ${id}`, deleted: false, error: err.message });
     }
   }
+  markDirty();
   return results;
 }
 
 function addTagToTrack(trackId, tagId) {
   const db = getDb();
   db.prepare('INSERT OR IGNORE INTO track_tags (track_id, tag_id) VALUES (?, ?)').run(trackId, tagId);
+  markDirty();
 }
 
 function removeTagFromTrack(trackId, tagId) {
   const db = getDb();
   db.prepare('DELETE FROM track_tags WHERE track_id = ? AND tag_id = ?').run(trackId, tagId);
+  markDirty();
 }
 
 function getTagsForTrack(trackId) {
@@ -101,6 +108,7 @@ function setTrackTags(trackId, tagIds) {
     }
   });
   transaction();
+  markDirty();
 }
 
 function searchTags(query) {

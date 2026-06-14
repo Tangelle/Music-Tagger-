@@ -1,4 +1,4 @@
-const { getDb } = require('./database');
+const { getDb, markDirty } = require('./database');
 
 function getAllTracks({ search = '', sortBy = 'title', sortDir = 'ASC', limit = 500, offset = 0 } = {}) {
   const db = getDb();
@@ -62,7 +62,7 @@ function insertTrack(track) {
     INSERT OR IGNORE INTO tracks (file_path, title, artist, album, duration, format, file_size)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  return stmt.run(
+  const result = stmt.run(
     track.file_path,
     track.title || null,
     track.artist || null,
@@ -71,6 +71,8 @@ function insertTrack(track) {
     track.format || null,
     track.file_size || null
   );
+  if (result.changes > 0) markDirty();
+  return result;
 }
 
 function removeTrack(id) {
@@ -78,12 +80,14 @@ function removeTrack(id) {
   const track = db.prepare('SELECT file_path, title FROM tracks WHERE id = ?').get(id);
   if (!track) return null;
   db.prepare('DELETE FROM tracks WHERE id = ?').run(id);
+  markDirty();
   return track; // { file_path, title }
 }
 
 function removeTrackByPath(filePath) {
   const db = getDb();
   db.prepare('DELETE FROM tracks WHERE file_path = ?').run(filePath);
+  markDirty();
 }
 
 function getTracksByTag(tagId, { sortBy = 'title', sortDir = 'ASC' } = {}) {
@@ -167,6 +171,7 @@ function recordPlay(trackId) {
         play_count = COALESCE(play_count, 0) + 1
     WHERE id = ?
   `).run(trackId);
+  markDirty();
 }
 
 module.exports = {
