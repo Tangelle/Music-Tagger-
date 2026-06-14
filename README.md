@@ -30,6 +30,12 @@
 
 ## 🚀 快速开始
 
+### 💾 直接下载（推荐）
+
+前往 [Releases](https://github.com/Tangelle/Music-Tagger-/releases) 页面下载最新 `Music Tagger X.X.X.exe`，**绿色便携版，双击即用，无需安装**。
+
+### 🛠️ 从源码构建
+
 ```bash
 git clone <仓库地址> && cd music-tagger
 npm install
