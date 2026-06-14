@@ -1,110 +1,125 @@
-# Music Tagger
+# 🎵 Music Tagger
 
-一款 Windows Electron 桌面应用，用于为本地音乐文件打标签。浏览、搜索并用自定义彩色标签管理你的音乐收藏。
+<div align="center">
 
-## 截图
+A sleek **Windows desktop app** for tagging and organizing your local music collection — built with Electron, React, and SQLite.
 
-> 启动应用后运行 `npm run dev` 即可查看界面。
+[![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron)](https://electronjs.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
-## 功能特性
+</div>
 
-- **音乐库管理** — 可排序/可筛选的曲目表格，支持批量标签分配、批量删除、拖出复制文件
-- **标签管理** — 标签 CRUD、按标签查看曲目、批量删除标签
-- **搜索** — 统一文本搜索 + 标签筛选交集
-- **设置** — 扫描目录管理、数据库位置配置、明暗主题切换
-- **拖放支持** — 从外部拖入音乐文件导入、从曲目拖出文件到资源管理器
-- **播放器** — 底部音频播放栏，支持进度/音量拖动、顺序/乱序播放、上一首/下一首
-- **播放统计** — 记录播放次数和最后使用时间，支持按统计排序
+---
 
-## 技术栈
+## ✨ Features
 
-| 层 | 技术 |
-|---|------|
-| 框架 | Electron 28 |
-| 前端 | React 18 + TypeScript + Tailwind CSS |
-| 数据库 | sql.js (SQLite 编译为 WASM) |
-| 图标 | lucide-react |
-| 音频解析 | music-metadata |
-| 构建 | Vite + electron-builder (NSIS) |
+| Category | Details |
+|----------|---------|
+| 🎶 **Music Library** | Sortable table with search, batch tagging, batch delete, drag-out to copy files |
+| 🏷️ **Tag Management** | Full CRUD for colored tags, view tracks by tag, batch delete |
+| 🔍 **Search** | Unified text search across track metadata + tag-name intersection |
+| ⚙️ **Settings** | Scan directories, change DB location, light/dark theme |
+| 📥 **Drag & Drop** | Drop audio files to import them, drag tracks out to Finder/Explorer |
+| 🔊 **Player** | Bottom bar with seek & volume sliders, sequential or shuffle playback |
+| 📊 **Play Stats** | Tracks play count and last-played time, sort by usage |
 
-## 快速开始
+## 🚀 Quick Start
 
 ```bash
-cd music-tagger
+git clone <repo-url> && cd music-tagger
 npm install
-npm run dev
+npm run dev          # launches Vite + Electron side-by-side
 ```
 
-## 项目结构
+The app window opens at `http://localhost:5173` with hot-reload.
+
+```bash
+npm run build        # portable .exe in release/
+```
+
+> **Prerequisite:** Node.js ≥ 18 (Windows).
+
+## 🧱 Architecture
+
+```
+┌─────────────────────────────────┐
+│  Renderer (React 18 + TS)       │
+│  window.api.*   ◀──────────────▶│  contextBridge
+├─────────────────────────────────┤
+│  Main Process (Node.js / CJS)   │
+│  ipcMain handlers               │
+│    ▶ trackService / tagService  │
+│    ▶ searchService / scanner    │
+├─────────────────────────────────┤
+│  sql.js (SQLite → WASM)         │
+└─────────────────────────────────┘
+```
+
+**IPC boundary is strict** — the renderer never touches `fs`, `db`, or Node APIs directly.
+
+## 📁 Project Structure
 
 ```
 music-tagger/
-├── main-process/        # Electron 主进程 (CommonJS)
-│   ├── main.js          # 入口 — BrowserWindow 创建
-│   ├── preload.js       # contextBridge IPC 暴露
-│   ├── ipcHandlers.js   # ipcMain.handle 注册
-│   ├── database.js      # sql.js 封装 + schema 迁移
-│   ├── scanner.js       # 音乐文件扫描器
-│   ├── trackService.js  # 曲目 CRUD 服务
-│   ├── tagService.js    # 标签 CRUD 服务
-│   └── searchService.js # 搜索服务
-├── src/                 # 渲染进程 (React + TypeScript)
-│   ├── components/      # 共享组件
-│   │   ├── AudioPlayer.tsx
-│   │   ├── Sidebar.tsx
-│   │   ├── TagBadge.tsx
-│   │   └── TagSelector.tsx
-│   ├── hooks/           # 自定义 hooks
-│   │   ├── useTheme.ts
-│   │   └── useDragDrop.ts
-│   ├── pages/           # 页面组件
-│   │   ├── MusicLibrary.tsx
-│   │   ├── TagManager.tsx
-│   │   ├── SearchPage.tsx
-│   │   └── SettingsPage.tsx
-│   ├── App.tsx          # 根组件
-│   ├── types.ts         # TypeScript 类型定义
-│   ├── index.css        # Tailwind + CSS 变量主题
-│   └── main.tsx         # React 入口
-├── index.html           # HTML 入口
+├── main-process/           # Electron main (CommonJS)
+│   ├── main.js             # BrowserWindow + app lifecycle
+│   ├── preload.js          # contextBridge API surface
+│   ├── ipcHandlers.js      # ipcMain.handle registry
+│   ├── database.js         # sql.js wrapper + migrations
+│   ├── scanner.js          # Recursive music-file scanner
+│   ├── trackService.js     # Track CRUD
+│   ├── tagService.js       # Tag CRUD
+│   └── searchService.js    # Search + stats
+├── src/                    # Renderer (React + TypeScript)
+│   ├── components/         # Sidebar, AudioPlayer, TagBadge, TagSelector
+│   ├── hooks/              # useTheme, useDragDrop
+│   ├── pages/              # MusicLibrary, TagManager, SearchPage, SettingsPage
+│   ├── App.tsx             # Root component
+│   ├── types.ts            # Window.api type declarations
+│   ├── index.css           # Tailwind + CSS-variable theme
+│   └── main.tsx            # React entry
+├── index.html              # HTML shell
 ├── package.json
 └── tsconfig.json
 ```
 
-## 数据库 Schema
+## 🗄️ Database Schema
 
-| 表 | 字段 |
-|----|------|
-| `tracks` | id, file_path (UNIQUE), title, artist, album, duration, format, file_size, added_at, last_used_at, play_count |
-| `tags` | id, name (UNIQUE), color, created_at |
-| `track_tags` | track_id, tag_id, created_at (FK 级联删除) |
-| `scan_dirs` | id, dir_path (UNIQUE), added_at |
+| Table | Columns |
+|-------|---------|
+| `tracks` | `id`, `file_path` (unique), `title`, `artist`, `album`, `duration`, `format`, `file_size`, `added_at`, `last_used_at`, `play_count` |
+| `tags` | `id`, `name` (unique), `color`, `created_at` |
+| `track_tags` | `track_id` → tracks, `tag_id` → tags (FK cascade) |
+| `scan_dirs` | `id`, `dir_path` (unique), `added_at` |
 
-## 命令
+## 🛠️ Tech Stack
 
-| 命令 | 说明 |
-|------|------|
-| `npm run dev` | 开发模式 — Vite + Electron 同时启动 |
-| `npm run vite:dev` | 仅 Vite 开发服务器 |
-| `npm run electron:dev` | 仅 Electron（需 Vite 在 5173 端口运行） |
-| `npm run build` | 生产构建 — Vite + electron-builder (NSIS 安装包) |
+| Layer | Technology |
+|-------|-----------|
+| Framework | Electron 28 |
+| Frontend | React 18 · TypeScript 5 · Tailwind CSS 3 |
+| Database | sql.js (SQLite compiled to WASM) |
+| Icons | lucide-react |
+| Audio metadata | music-metadata |
+| Build | Vite 5 · electron-builder (portable) |
 
-## 架构
+## 📦 Scripts
 
-```
-渲染进程 (React SPA)
-  ↕ window.api.* (TypeScript 接口)
-preload.js (contextBridge)
-  ↕ ipcRenderer.invoke / send / sendSync
-ipcMain.handle / on
-  ↕
-主进程服务 (trackService / tagService / searchService / scanner)
-  ↕
-sql.js (SQLite WASM)
-```
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev server + Electron concurrently |
+| `npm run vite:dev` | Vite dev server only (port 5173) |
+| `npm run electron:dev` | Electron only (requires Vite running) |
+| `npm run build` | Production build → portable `.exe` |
+| `npm run vite:build` | Frontend build only → `dist/` |
 
-**IPC 边界**：前端从不直接访问 fs、db 或 Node API。所有操作通过 `window.api.*` → preload → ipcMain handler 完成。
+## 🎨 Theming
 
-## License
+Dark mode is the default. Toggle via the sidebar button — preference is persisted in `localStorage` and applied via an inline `<script>` **before paint** to eliminate flash. Theme uses CSS custom properties (`--s-*` for surfaces, `--tx-*` for text) controlled by a `.dark` class on `<html>`.
+
+## 📄 License
 
 MIT
