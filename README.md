@@ -12,6 +12,8 @@
 
 > 🧑‍💻 本项目由 **16 岁初中生** 全程使用 **Claude Code** 搭配 **DeepSeek V4 Pro** 编写，0 行手写代码。
 
+[**English Version**](./README_EN.md)
+
 </div>
 
 ---
