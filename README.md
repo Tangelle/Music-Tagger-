@@ -10,6 +10,8 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
+> 🧑‍💻 本项目由 **16 岁初中生** 全程使用 **Claude Code** 搭配 **DeepSeek V4 Pro** 编写，0 行手写代码。
+
 </div>
 
 ---
