@@ -24,6 +24,8 @@
       "package.json"
     ],
     "extraResources": [],
+    "electronDist": "node_modules/electron/dist",
+    "downloadAlternateFFmpeg": false,
     "win": {
       "target": "portable",
       "icon": null
